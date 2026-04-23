@@ -13,3 +13,7 @@ __pycache__/
 .ipynb_checkpoints/
 de440s.bsp
 hst_10634_03_acs_wfc_total_j9dm03.fits
+hst_10634_03_acs_wfc_f555w_j9dm03cv_flc.fits
+hst_10634_03_acs_wfc_f814w_j9dm03cy_flc.fits
+hst_10634_03_acs_wfc_f555w_j9dm03_drc.fits
+hst_10634_03_acs_wfc_f814w_j9dm03_drc.fits
