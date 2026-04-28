@@ -17,8 +17,10 @@
 
 >> Streamlit: This is for our Streamlit app to make our code into a more organized site.
 
->## How to Run:
+> ## How to Run:
 >> You clone the repository by using "git clone Astro1221Project3." Then, you install all the necessary requirements. After getting all of the requirements from Requirements.txt, you run the code from the Project3.py file, as that is the one that we use for the Streamlit. 
+
+>> While you use the .py for actual code for running, all of our documentation is in the .ipynb file.
 
 > ## Key Takeaways:
 >> We learned that with our image that HST used different "bands" to act as filters to get the blue and orange colors of the stars. The catch to this was that they did not use blue or orange wavelengths for the image, they used something called "false imaging." THis meant that the blue was actually more of a yellow-green (555 nm) and the orange was more of a infrared wavelength (814 nm). These were the two bands that we used to check for the intensity and the colors of the stars (which we will get into more in the docstrings).
