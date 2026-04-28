@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import astropy.units as u
 import astropy.constants as const
 from astropy.io import fits
@@ -7,11 +8,8 @@ import scipy
 import urllib.request
 import os 
 from scipy import optimize
-from matplotlib.colors import LogNorm
-import array
-import os 
-from scipy import optimize
 import photutils.detection as detect
+import streamlit as st
 
 NGC2660_555_fits = "hst_10634_03_acs_wfc_f555w_j9dm03_drc.fits"
 NGC2660_814_fits = "hst_10634_03_acs_wfc_f814w_j9dm03_drc.fits"
@@ -30,16 +28,28 @@ if not os.path.exists(NGC2660_814_fits) & os.path.exists(NGC2660_555_fits):
             print("Error Downloading File")
             NGC2660_555_fits = None
             NGC2660_814_fits = None
+
+HDUList = fits.open(NGC2660_fits)
+
+image_total = HDUList[1].data
+
+plt.figure()
+plt.imshow(image_total, cmap='gray', origin = 'lower', norm=LogNorm())
+plt.colorbar(norm=LogNorm())
+plt.show()
+
+plt.savefig('NGC2660_total.png')
+
+HDUList.close()
+
 bands = [NGC2660_555_fits, NGC2660_814_fits]
 image_data = []
 for b in bands:
     with fits.open(b) as HDUList:
-        image_data.append(HDUList[1].data) #reads the data from the SCI section of the fits file
+        image_data.append(HDUList[1].data) 
         HDUList.close()
 image_555, image_814 = image_data
 
-sigma = 3
-fwhm = 2.355 * sigma
 clipped_data_555 = image_555.copy()
 for i in range(5):
     mean = np.nanmean(clipped_data_555)
@@ -67,34 +77,37 @@ fig, axes = plt.subplots()
 axes.hist(image_555.flatten(), bins=50, color='blue', range=(-.1, .75), alpha=.6)
 axes.hist(subtracted_image_555.flatten(), bins=50, color='red', range=(-.1, .75), alpha=.6)
 
-subtracted_image_814 = image_814 - background_mean_814
+subtracted_image_555 = image_555 - background_mean_555
 
 plt.figure()
-plt.imshow(subtracted_image_814, cmap='grey', origin = 'lower', norm=LogNorm())
+plt.imshow(subtracted_image_555, cmap='grey', origin = 'lower', norm=LogNorm())
 plt.colorbar(norm=LogNorm())
 plt.show()
 
 fig, axes = plt.subplots()
-axes.hist(image_814.flatten(), bins=50, color='blue', range=(-.1, .75), alpha=.6)
-axes.hist(subtracted_image_814.flatten(), bins=50, color='red', range=(-.1, .75), alpha=.6)
+axes.hist(image_555.flatten(), bins=50, color='blue', range=(-.1, .75), alpha=.6)
+axes.hist(subtracted_image_555.flatten(), bins=50, color='red', range=(-.1, .75), alpha=.6)
+
+sigma = 3
+
+fwhm = 2.355 * sigma
 
 subtracted_image_555 = image_555 - background_mean_555
 subtracted_image_814 = image_814 - background_mean_814
-detection_threshold = 5 * background_mean_555
-
+print(background_mean_555)
+detection_threshold =  5 * background_mean_555
+print(detection_threshold)
 filter = int(np.ceil(fwhm))
 
-local_max = scipy.ndimage.maximum_filter(subtracted_image_555, size=filter)
 
-peaks = (subtracted_image_555 == local_max) & (subtracted_image_555 > detection_threshold)
-
-detections_y, detections_x = np.where(peaks)
-
-fig, axes = plt.subplots()
+detections =  detect.find_peaks(data=subtracted_image_555, threshold=detection_threshold, mask=mask*1000, min_separation=50 , n_peaks=200)
+print(detections)
+detections_x = detections['x_peak']
+detections_y = detections['y_peak']
 
 plt.figure()
 plt.imshow(subtracted_image_555, cmap='grey', origin = 'lower', norm=LogNorm(vmin = .0001, vmax=300))
-axes.scatter(detections_x, detections_y, color = 'purple', alpha =.6, marker='x')
+plt.scatter(detections_x, detections_y, color = 'purple', alpha =.6, marker='o', )
 plt.colorbar(norm=LogNorm(vmin = .0001, vmax=300))
 plt.show()
 
@@ -110,7 +123,7 @@ class Star:
         return (self.row, self.col)
 
     def value_at(self, image):
-        return image[self.row, self.col]
+        return image[self.row, self.col]        
 
     def cutout(self, image, half_size=8):
         nrows, ncols = image.shape
@@ -128,7 +141,6 @@ class Star:
             c_end = ncols
         return image[r_start:r_end, c_start:c_end]
 
-
 stars = [
     Star(1311, 1231, "1"),
     Star(544, 3297, "2"),
@@ -138,18 +150,32 @@ stars = [
     Star(4064, 1437, "6"),
     Star(2160, 690, "7"),
     Star(4531, 1714, "8"),
-    Star(2010, 3225, "9"),
+    Star(2010, 3230, "9"),
     Star(2710, 1710, "10"),
     Star(4531, 1713, "11"),
     Star(4168, 2647, "12"),
     Star(3565, 3130, "13"),
-    Star(3203, 1623, "14")
-]
-
+    Star(3203, 1623, "14"),
+    Star(2228, 2120, "15"),
+    Star(2888, 2795, "16"),
+    Star(2015, 2177, "18"),
+    Star(3056, 1063, "19"),
+    Star(4116, 3859, "20"),
+    Star(3333, 866, "21"),
+    Star(2340, 1630, "22"),
+    Star(1880, 2087, "23"),
+    Star(1900, 1738, "24"),
+    Star(2003, 1967, "25"),
+    Star(1953, 1999, "26"),
+    Star(1988, 2106, "27"),
+    Star(2016, 2176, "28"),
+    Star(2193, 2216, "29"),
+    Star(1433, 2298, "30")
+    ]
 
 flux = []
 
-def psf_fit(coords, row, col, sigma=3, amplitude_func=100, offset=0):
+def psf_fit(coords, row, col, sigma=3, amplitude_func=10):
     x, y = coords
     
 
@@ -160,15 +186,15 @@ def psf_fit(coords, row, col, sigma=3, amplitude_func=100, offset=0):
 def image_2660(selected_image):
     for s in stars:
         cutout = s.cutout(image=selected_image)
-        y_size, x_size = cutout.shape
+        nonan_cutout = np.nan_to_num(cutout)
+        y_size, x_size = nonan_cutout.shape
         yy, xx = np.meshgrid(np.arange(y_size), np.arange(x_size), indexing='ij') 
-        xdata = (yy, xx)
-        ydata = cutout.ravel()
-        print(ydata.shape)
-        ydata = np.nan_to_num(ydata, nan=np.nanmedian(ydata))
-        peak = np.max(ydata)
-        bg = np.median(ydata)
-        flux.append(2 * np.pi * peak * 2**2)
+        coordinates = (yy, xx)
+        amplitude = nonan_cutout.ravel()
+        amplitude = np.nan_to_num(amplitude, nan=np.nanmedian(amplitude))
+        peak = np.max(amplitude)
+        bg = np.median(amplitude)
+    
 
         lower_bounds = [0, 0, 0.5, 0, -np.inf]
         upper_bounds = [y_size, x_size, 10.0, np.inf, np.inf]
@@ -179,46 +205,75 @@ def image_2660(selected_image):
         1.0,
         peak - bg,
         bg
+
         ]
-        print(p0)
         popt, pcov = optimize.curve_fit(
             psf_fit,
-            xdata,
-            ydata,
+            coordinates,
+            amplitude,
             p0=p0,
             bounds=(lower_bounds, upper_bounds),
-            maxfev=2000
-        )
-        fit_model = psf_fit(xdata, *popt).reshape(y_size, x_size)
-        actual_data = ydata.reshape(y_size, x_size)
-        fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+            maxfev=20000
+            )         
+        actual_data = amplitude.reshape(y_size, x_size)
+        first_fit_model = psf_fit(coordinates, *popt).reshape(y_size, x_size)
+        mask_data = (actual_data - first_fit_model) > 60.
+        actual_data[mask_data] = np.nan
+        nonan_masked = np.nan_to_num(actual_data, nan=background_mean_555)
+        masked_popt, mask_pcov = optimize.curve_fit(
+            psf_fit,
+            coordinates,
+            nonan_masked.ravel(),
+            p0=p0,
+            bounds = (lower_bounds, upper_bounds),
+            maxfev=500000,
+            )
 
+        second_fit_model = psf_fit(coordinates, *masked_popt).reshape(y_size, x_size)
+        actual_data = amplitude.reshape(y_size, x_size)
+        fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+        peak_final = np.max(nonan_masked) 
+        flux.append(2 * np.pi * peak_final * 2**2)
         im0 = ax[0].imshow(actual_data, origin='lower')
         ax[0].set_title('Actual Star (Data)')
         fig.colorbar(im0, ax=ax[0])
-        
-        im1 = ax[1].imshow(fit_model, origin='lower')
+        averaged_fit = (first_fit_model+second_fit_model)/2
+        im1 = ax[1].imshow(averaged_fit, origin='lower')
         ax[1].set_title('Best Fit')
         fig.colorbar(im1, ax=ax[1])
         
-        im2 = ax[2].imshow(actual_data - fit_model, origin='lower')
+        im2 = ax[2].imshow(actual_data - averaged_fit, origin='lower')
         ax[2].set_title('Residuals (Data - Model)')
         fig.colorbar(im2, ax=ax[2]) 
-        print(f"popt {popt}")
+        
 image_2660(subtracted_image_555)
 image_2660(subtracted_image_814)
 print(f"flux {flux}")
 
 flux_split = len(flux)//2 
-intensity_555 = np.array(flux[:flux_split])
-intensity_814 = np.array(flux[flux_split:])
+intensity_555 = np.asarray(flux[:flux_split])
+intensity_814 = np.asarray(flux[flux_split:])
 print(f"flux_555 {intensity_555}")
 print(f"flux_814 {intensity_814}")
 flux_subtraction = intensity_555 - intensity_814
 print(f"flux_subtraction {flux_subtraction}")
 
 plt.scatter(flux_subtraction, intensity_814)
-plt.xlabel("Color/Temperature")
-plt.ylabel("Magnitude/Luminosity")
+plt.xlim(-400, 200)
+plt.ylim(5000, 6150)
+plt.xlabel("Color")
+plt.ylabel("Magnitude")
 plt.title("NGC 2660 Color-Magnitude Diagram")
 plt.show()
+
+plt.savefig('NGC2660_CMD.png')
+
+st.title("NGC 2660 Color-Magnitude Diagram")
+st.write("The image of the total cluster is shown below:")
+st.image('NGC2660_total.png')
+st.write("This is the Color-Magnitude Diagram of NGC 2660, which is an open cluster of stars.")
+st.write("Press the button below to see the color-magnitude diagram of manually selected stars:")
+if st.button("See Color-Magnitude Diagram"):
+    with st.spinner("Loading color-magnitude diagram..."):
+        st.subheader("Color-Magnitude Diagram")
+        st.image('NGC2660_CMD.png')

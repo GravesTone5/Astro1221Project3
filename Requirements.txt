@@ -1,1 +1,3 @@
 !pip install astropy
+!pip install photutils (if you can actually use it)
+!pip install scipy (if not in your python distribution)
