@@ -36,9 +36,9 @@ image_total = HDUList[1].data
 plt.figure()
 plt.imshow(image_total, cmap='gray', origin = 'lower', norm=LogNorm())
 plt.colorbar(norm=LogNorm())
+plt.savefig('NGC2660_total.png')
 plt.show()
 
-plt.savefig('NGC2660_total.png')
 
 HDUList.close()
 
@@ -252,9 +252,9 @@ plt.ylim(5000, 6150)
 plt.xlabel("Color")
 plt.ylabel("Magnitude")
 plt.title("NGC 2660 Color-Magnitude Diagram")
+plt.savefig('NGC2660_CMD.png')
 plt.show()
 
-plt.savefig('NGC2660_CMD.png')
 
 st.title("NGC 2660 Color-Magnitude Diagram")
 st.write("The image of the total cluster is shown below:")
