@@ -175,9 +175,8 @@ stars = [
 
 flux = []
 
-def psf_fit(coords, row, col, sigma=3, amplitude_func=10):
+def psf_fit(coords, row, col, sigma=3, amplitude_func=10, offset=0):
     x, y = coords
-    
 
     psf = amplitude_func * np.exp(-((y-row)**2 + (x-col)**2)/(2*sigma**2))
     fwhm = 2.355*sigma
@@ -229,22 +228,10 @@ def image_2660(selected_image):
             maxfev=500000,
             )
 
-        second_fit_model = psf_fit(coordinates, *masked_popt).reshape(y_size, x_size)
         actual_data = amplitude.reshape(y_size, x_size)
-        fig, ax = plt.subplots(1, 3, figsize=(15, 5))
         peak_final = np.max(nonan_masked) 
         flux.append(2 * np.pi * peak_final * 2**2)
-        im0 = ax[0].imshow(actual_data, origin='lower')
-        ax[0].set_title('Actual Star (Data)')
-        fig.colorbar(im0, ax=ax[0])
-        averaged_fit = (first_fit_model+second_fit_model)/2
-        im1 = ax[1].imshow(averaged_fit, origin='lower')
-        ax[1].set_title('Best Fit')
-        fig.colorbar(im1, ax=ax[1])
         
-        im2 = ax[2].imshow(actual_data - averaged_fit, origin='lower')
-        ax[2].set_title('Residuals (Data - Model)')
-        fig.colorbar(im2, ax=ax[2]) 
         
 image_2660(subtracted_image_555)
 image_2660(subtracted_image_814)
@@ -258,7 +245,8 @@ print(f"flux_814 {intensity_814}")
 flux_subtraction = intensity_555 - intensity_814
 print(f"flux_subtraction {flux_subtraction}")
 
-plt.scatter(flux_subtraction, intensity_814)
+plt.figure()
+flux_plot = plt.scatter(flux_subtraction, intensity_814)
 plt.xlim(-400, 200)
 plt.ylim(5000, 6150)
 plt.xlabel("Color")
